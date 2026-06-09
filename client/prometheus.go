@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,16 +33,16 @@ type PrometheusResponse struct {
 	Error     string          `json:"error,omitempty"`
 }
 
-func (c *PrometheusClient) Query(query, t string) (*PrometheusResponse, error) {
+func (c *PrometheusClient) Query(ctx context.Context, query, t string) (*PrometheusResponse, error) {
 	params := url.Values{"query": {query}}
 	if t != "" {
 		params.Set("time", t)
 	}
-	return c.get("/api/v1/query", params)
+	return c.get(ctx, "/api/v1/query", params)
 }
 
-func (c *PrometheusClient) QueryRange(query, start, end, step string) (*PrometheusResponse, error) {
-	return c.get("/api/v1/query_range", url.Values{
+func (c *PrometheusClient) QueryRange(ctx context.Context, query, start, end, step string) (*PrometheusResponse, error) {
+	return c.get(ctx, "/api/v1/query_range", url.Values{
 		"query": {query},
 		"start": {start},
 		"end":   {end},
@@ -49,16 +50,16 @@ func (c *PrometheusClient) QueryRange(query, start, end, step string) (*Promethe
 	})
 }
 
-func (c *PrometheusClient) MetricNames() (*PrometheusResponse, error) {
-	return c.get("/api/v1/label/__name__/values", nil)
+func (c *PrometheusClient) MetricNames(ctx context.Context) (*PrometheusResponse, error) {
+	return c.get(ctx, "/api/v1/label/__name__/values", nil)
 }
 
-func (c *PrometheusClient) LabelValues(label string) (*PrometheusResponse, error) {
-	return c.get(fmt.Sprintf("/api/v1/label/%s/values", url.PathEscape(label)), nil)
+func (c *PrometheusClient) LabelValues(ctx context.Context, label string) (*PrometheusResponse, error) {
+	return c.get(ctx, fmt.Sprintf("/api/v1/label/%s/values", url.PathEscape(label)), nil)
 }
 
-func (c *PrometheusClient) get(path string, params url.Values) (*PrometheusResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+path, nil)
+func (c *PrometheusClient) get(ctx context.Context, path string, params url.Values) (*PrometheusResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +79,9 @@ func (c *PrometheusClient) get(path string, params url.Values) (*PrometheusRespo
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("prometheus HTTP %d: %.500s", resp.StatusCode, body)
 	}
 	var result PrometheusResponse
 	if err := json.Unmarshal(body, &result); err != nil {

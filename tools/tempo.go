@@ -35,6 +35,7 @@ func RegisterTempo(s *server.MCPServer, c *client.TempoClient) {
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			resp, err := c.Search(
+				ctx,
 				req.GetString("tags", ""),
 				req.GetString("min_duration", ""),
 				req.GetString("max_duration", ""),
@@ -62,7 +63,7 @@ func RegisterTempo(s *server.MCPServer, c *client.TempoClient) {
 			if traceID == "" {
 				return mcp.NewToolResultError("trace_id is required"), nil
 			}
-			data, err := c.GetTrace(traceID)
+			data, err := c.GetTrace(ctx, traceID)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("failed to get trace: %v", err)), nil
 			}
@@ -75,7 +76,7 @@ func RegisterTempo(s *server.MCPServer, c *client.TempoClient) {
 			mcp.WithDescription("List all searchable tag names in Tempo. Use this to discover what attributes are available for filtering in tempo_search."),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			tags, err := c.SearchTags()
+			tags, err := c.SearchTags(ctx)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("failed to list tags: %v", err)), nil
 			}
@@ -96,7 +97,7 @@ func RegisterTempo(s *server.MCPServer, c *client.TempoClient) {
 			if tag == "" {
 				return mcp.NewToolResultError("tag is required"), nil
 			}
-			values, err := c.SearchTagValues(tag)
+			values, err := c.SearchTagValues(ctx, tag)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("failed to get tag values: %v", err)), nil
 			}

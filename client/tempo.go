@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,12 +31,12 @@ type TraceSearchResponse struct {
 }
 
 type TraceSearchHit struct {
-	TraceID           string            `json:"traceID"`
-	RootServiceName   string            `json:"rootServiceName"`
-	RootTraceName     string            `json:"rootTraceName"`
-	StartTimeUnixNano string            `json:"startTimeUnixNano"`
-	DurationMs        int64             `json:"durationMs"`
-	SpanSets          []SpanSet         `json:"spanSets,omitempty"`
+	TraceID           string    `json:"traceID"`
+	RootServiceName   string    `json:"rootServiceName"`
+	RootTraceName     string    `json:"rootTraceName"`
+	StartTimeUnixNano string    `json:"startTimeUnixNano"`
+	DurationMs        int64     `json:"durationMs"`
+	SpanSets          []SpanSet `json:"spanSets,omitempty"`
 }
 
 type SpanSet struct {
@@ -50,7 +51,7 @@ type Span struct {
 	Attributes        map[string]string `json:"attributes,omitempty"`
 }
 
-func (c *TempoClient) Search(tags, minDuration, maxDuration string, limit int, start, end string) (*TraceSearchResponse, error) {
+func (c *TempoClient) Search(ctx context.Context, tags, minDuration, maxDuration string, limit int, start, end string) (*TraceSearchResponse, error) {
 	params := url.Values{}
 	if tags != "" {
 		params.Set("tags", tags)
@@ -70,7 +71,7 @@ func (c *TempoClient) Search(tags, minDuration, maxDuration string, limit int, s
 	if end != "" {
 		params.Set("end", end)
 	}
-	body, err := c.getRaw("/api/search", params)
+	body, err := c.getRaw(ctx, "/api/search", params)
 	if err != nil {
 		return nil, err
 	}
@@ -81,16 +82,16 @@ func (c *TempoClient) Search(tags, minDuration, maxDuration string, limit int, s
 	return &result, nil
 }
 
-func (c *TempoClient) GetTrace(traceID string) (json.RawMessage, error) {
-	body, err := c.getRaw(fmt.Sprintf("/api/traces/%s", traceID), nil)
+func (c *TempoClient) GetTrace(ctx context.Context, traceID string) (json.RawMessage, error) {
+	body, err := c.getRaw(ctx, fmt.Sprintf("/api/traces/%s", traceID), nil)
 	if err != nil {
 		return nil, err
 	}
 	return json.RawMessage(body), nil
 }
 
-func (c *TempoClient) SearchTags() ([]string, error) {
-	body, err := c.getRaw("/api/search/tags", nil)
+func (c *TempoClient) SearchTags(ctx context.Context) ([]string, error) {
+	body, err := c.getRaw(ctx, "/api/search/tags", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +104,8 @@ func (c *TempoClient) SearchTags() ([]string, error) {
 	return result.TagNames, nil
 }
 
-func (c *TempoClient) SearchTagValues(tag string) ([]string, error) {
-	body, err := c.getRaw(fmt.Sprintf("/api/search/tag/%s/values", url.PathEscape(tag)), nil)
+func (c *TempoClient) SearchTagValues(ctx context.Context, tag string) ([]string, error) {
+	body, err := c.getRaw(ctx, fmt.Sprintf("/api/search/tag/%s/values", url.PathEscape(tag)), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -117,8 +118,8 @@ func (c *TempoClient) SearchTagValues(tag string) ([]string, error) {
 	return result.TagValues, nil
 }
 
-func (c *TempoClient) getRaw(path string, params url.Values) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+path, nil)
+func (c *TempoClient) getRaw(ctx context.Context, path string, params url.Values) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
 	}

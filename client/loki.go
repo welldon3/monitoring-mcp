@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,8 +33,8 @@ type LokiResponse struct {
 	Data   json.RawMessage `json:"data"`
 }
 
-func (c *LokiClient) QueryRange(query, start, end string, limit int) (*LokiResponse, error) {
-	return c.get("/loki/api/v1/query_range", url.Values{
+func (c *LokiClient) QueryRange(ctx context.Context, query, start, end string, limit int) (*LokiResponse, error) {
+	return c.get(ctx, "/loki/api/v1/query_range", url.Values{
 		"query": {query},
 		"start": {start},
 		"end":   {end},
@@ -41,16 +42,16 @@ func (c *LokiClient) QueryRange(query, start, end string, limit int) (*LokiRespo
 	})
 }
 
-func (c *LokiClient) Labels() (*LokiResponse, error) {
-	return c.get("/loki/api/v1/labels", nil)
+func (c *LokiClient) Labels(ctx context.Context) (*LokiResponse, error) {
+	return c.get(ctx, "/loki/api/v1/labels", nil)
 }
 
-func (c *LokiClient) LabelValues(label string) (*LokiResponse, error) {
-	return c.get(fmt.Sprintf("/loki/api/v1/label/%s/values", url.PathEscape(label)), nil)
+func (c *LokiClient) LabelValues(ctx context.Context, label string) (*LokiResponse, error) {
+	return c.get(ctx, fmt.Sprintf("/loki/api/v1/label/%s/values", url.PathEscape(label)), nil)
 }
 
-func (c *LokiClient) get(path string, params url.Values) (*LokiResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+path, nil)
+func (c *LokiClient) get(ctx context.Context, path string, params url.Values) (*LokiResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +74,9 @@ func (c *LokiClient) get(path string, params url.Values) (*LokiResponse, error) 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("loki HTTP %d: %.500s", resp.StatusCode, body)
 	}
 	var result LokiResponse
 	if err := json.Unmarshal(body, &result); err != nil {

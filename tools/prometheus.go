@@ -26,7 +26,7 @@ func RegisterPrometheus(s *server.MCPServer, c *client.PrometheusClient) {
 			if query == "" {
 				return mcp.NewToolResultError("query is required"), nil
 			}
-			resp, err := c.Query(query, req.GetString("time", ""))
+			resp, err := c.Query(ctx, query, req.GetString("time", ""))
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("query failed: %v", err)), nil
 			}
@@ -62,7 +62,7 @@ func RegisterPrometheus(s *server.MCPServer, c *client.PrometheusClient) {
 			if query == "" || start == "" || end == "" || step == "" {
 				return mcp.NewToolResultError("query, start, end, and step are required"), nil
 			}
-			resp, err := c.QueryRange(query, start, end, step)
+			resp, err := c.QueryRange(ctx, query, start, end, step)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("range query failed: %v", err)), nil
 			}
@@ -75,7 +75,7 @@ func RegisterPrometheus(s *server.MCPServer, c *client.PrometheusClient) {
 			mcp.WithDescription("List all metric names available in Prometheus. Use this first to discover what metrics exist before writing queries."),
 		),
 		func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			resp, err := c.MetricNames()
+			resp, err := c.MetricNames(ctx)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("failed to list metric names: %v", err)), nil
 			}
@@ -96,7 +96,7 @@ func RegisterPrometheus(s *server.MCPServer, c *client.PrometheusClient) {
 			if label == "" {
 				return mcp.NewToolResultError("label is required"), nil
 			}
-			resp, err := c.LabelValues(label)
+			resp, err := c.LabelValues(ctx, label)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("failed to get label values: %v", err)), nil
 			}

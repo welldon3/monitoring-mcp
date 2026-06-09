@@ -37,7 +37,7 @@ func RegisterLoki(s *server.MCPServer, c *client.LokiClient) {
 				return mcp.NewToolResultError("query, start, and end are required"), nil
 			}
 			limit := req.GetInt("limit", 100)
-			resp, err := c.QueryRange(query, start, end, limit)
+			resp, err := c.QueryRange(ctx, query, start, end, limit)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("loki query failed: %v", err)), nil
 			}
@@ -58,7 +58,7 @@ func RegisterLoki(s *server.MCPServer, c *client.LokiClient) {
 			if label == "" {
 				return mcp.NewToolResultError("label is required"), nil
 			}
-			resp, err := c.LabelValues(label)
+			resp, err := c.LabelValues(ctx, label)
 			if err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("failed to get label values: %v", err)), nil
 			}
